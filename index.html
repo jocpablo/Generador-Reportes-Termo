@@ -22,7 +22,7 @@
       font-family: Arial, sans-serif;
     }
     #pageContainer {
-      display: flex;               /* Contenedor flex */
+      display: flex; /* Contenedor flex */
       min-height: 100vh;
       flex-wrap: nowrap;
     }
@@ -164,7 +164,6 @@
       flex-wrap: wrap;
     }
     .signature-block { text-align: center; }
-    /* Clase para los textos de firma que se editarán en modo avanzado */
     .signature-label { }
     
     /* Contenedor del gráfico */
@@ -227,32 +226,155 @@
     .fs-buttons button:hover { filter: brightness(0.95); }
     .btn-saveFile { background-color: #28a745; }
     .btn-loadFile { background-color: #007bff; }
+    
+    /*********************************************************
+     * ESTILOS PARA LOS TOGGLE SWITCH
+     *********************************************************/
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;   /* Ajusta el ancho */
+      height: 26px;  /* Ajusta la altura */
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    /* Ocultamos el checkbox original */
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    /* La "pista" del switch */
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; 
+      left: 0;
+      right: 0; 
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px; /* Bordes redondeados */
+    }
+    /* La "bolita" */
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px; 
+      width: 20px; 
+      left: 3px; 
+      bottom: 3px; 
+      background-color: #fff;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    /* Cuando está activado */
+    input:checked + .slider {
+      background-color: #cc0000; /* Color del switch al encenderse */
+    }
+    /* Movemos la bolita a la derecha cuando está activado */
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    /*********************************************************
+     * MEDIA QUERIES PARA RESPONSIVE
+     *********************************************************/
+    /* ===== Pantallas pequeñas (por debajo de ~768px) ===== */
+    @media (max-width: 768px) {
+      #pageContainer {
+        flex-direction: column;  /* Sidebar arriba, contenido abajo */
+      }
+      #sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+        border-radius: 0;
+        margin-bottom: 20px;
+      }
+      #mainContainer {
+        padding: 10px;
+      }
+      #logoContainer img {
+        width: 120px;  /* Ajustar logos para móvil */
+        height: 80px;
+      }
+      .section-title {
+        font-size: 1.2em; /* Texto un poco más grande en móvil */
+      }
+      .btn {
+        font-size: 0.9em;
+        margin: 5px 0;
+      }
+      .inspection-table,
+      .header-table {
+        font-size: 0.9em;
+      }
+      #mainTitle {
+        font-size: 1.6em; /* Ajustar el título principal en móvil */
+      }
+    }
+
+    /* ===== Pantallas muy grandes (ej. >= 2560px) ===== */
+    @media (min-width: 2560px) {
+      body {
+        font-size: 18px; /* Aumentamos fuente base */
+      }
+      .section-title {
+        font-size: 1.6em; /* Títulos de sección más grandes */
+      }
+      #mainTitle {
+        font-size: 3em; /* Título principal más grande */
+      }
+      .btn {
+        font-size: 1.1em; /* Botones más grandes */
+      }
+      .header-table td,
+      .inspection-table td,
+      .inspection-table th {
+        padding: 12px;  /* Aumentar padding */
+      }
+    }
   </style>
 </head>
 <body>
 <div id="pageContainer">
   <!-- Sidebar: Menú de edición -->
   <div id="sidebar" class="no-print">
+    <!-- Toggle para Activar modo edición -->
     <div style="margin-bottom: 10px;">
-      <label>
+      <label class="switch">
         <input type="checkbox" id="editModeCheckbox" onchange="toggleEditingMode(this)" checked>
-        Activar modo edición
+        <span class="slider"></span>
       </label>
+      <span>Activar modo edición</span>
     </div>
+    
     <div id="editMenu">
       <fieldset>
         <legend>Modo de Edición</legend>
-        <label>
-          <input type="checkbox" id="advancedEditCheckbox" onchange="toggleAdvancedEditing(this)">
-          Edición avanzada (encabezados, títulos y firmas)
-        </label>
-        <label>
-          <input type="checkbox" id="roundingCheckbox" onchange="toggleRounding(this)">
-          Redondear elementos rojos
-        </label>
+        <!-- Toggle para Edición avanzada -->
+        <div style="margin-bottom: 10px;">
+          <label class="switch">
+            <input type="checkbox" id="advancedEditCheckbox" onchange="toggleAdvancedEditing(this)">
+            <span class="slider"></span>
+          </label>
+          <span>Edición avanzada (encabezados, títulos y firmas)</span>
+        </div>
+        
+        <!-- Toggle para Redondear elementos rojos -->
+        <div style="margin-bottom: 10px;">
+          <label class="switch">
+            <input type="checkbox" id="roundingCheckbox" onchange="toggleRounding(this)">
+            <span class="slider"></span>
+          </label>
+          <span>Redondear elementos rojos</span>
+        </div>
+        
         <button class="btn btn-danger" onclick="resetDocument()">Restablecer Documento</button>
         <button class="btn btn-primary" onclick="guardarConfiguracionPredeterminada()">Fijar Configuración Base</button>
       </fieldset>
+      
       <fieldset>
         <legend>Temas Encabezados/Títulos</legend>
         <label>Fuente (Encabezados):
@@ -985,3 +1107,5 @@
 </script>
 </body>
 </html>
+
+
