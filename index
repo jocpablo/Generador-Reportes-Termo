@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Termografía Infrarroja</title>
+  
+  <!-- Incluir Chart.js y su plugin datalabels -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  
+  <!-- Incluir Flatpickr para la selección de fechas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+  <style>
+    /* ====== LAYOUT PRINCIPAL (FLEX) ====== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+    #pageContainer {
+      display: flex;               /* Contenedor flex */
+      min-height: 100vh;
+      flex-wrap: nowrap;
+    }
+    /* SIDEBAR A LA IZQUIERDA */
+    #sidebar {
+      width: 320px;
+      min-width: 250px;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(8px);
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+      border-top-right-radius: 15px;
+      border-bottom-right-radius: 15px;
+      box-sizing: border-box;
+    }
+    /* CONTENIDO PRINCIPAL A LA DERECHA */
+    #mainContainer {
+      flex: 1;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .header-select, .sel-column { display: none !important; }
+      body { transform: none !important; transform-origin: initial !important; }
+    }
+    
+    .section-title {
+      background-color: #cc0000;
+      color: #fff;
+      padding: 8px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .no-print { margin-bottom: 10px; }
+    
+    /* Contenedor de Logos */
+    #logoContainer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    #logoContainer img {
+      display: none;
+      object-fit: contain;
+      width: 150px;
+      height: 100px;
+    }
+    
+    /* Tabla de encabezado */
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .header-table td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      vertical-align: middle;
+    }
+    .label-red {
+      background-color: #cc0000;
+      color: #fff;
+      font-weight: bold;
+      width: 15%;
+      white-space: nowrap;
+    }
+    .white-field {
+      background-color: #fff;
+      width: 35%;
+    }
+    .white-field input,
+    .white-field textarea {
+      width: 100%;
+      padding: 6px;
+      border: none;
+      outline: none;
+      box-sizing: border-box;
+    }
+    
+    /* Tabla de inspecciones */
+    .inspection-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .inspection-table th {
+      background-color: #cc0000;
+      color: #fff;
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+      border: 1px solid #ccc;
+    }
+    .inspection-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      vertical-align: middle;
+    }
+    .sel-column { width: 40px; }
+    
+    .hr-gradient {
+      border: 0;
+      height: 4px;
+      background: linear-gradient(to right, transparent, #cc0000 50%, transparent);
+      margin: 20px 0;
+    }
+    
+    /* Botones generales (estilo profesional) */
+    .btn {
+      margin: 5px 5px 10px 0;
+      padding: 6px 12px;
+      cursor: pointer;
+      border: none;
+      color: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+      transition: background-color 0.2s;
+    }
+    .btn:hover { filter: brightness(0.95); }
+    .btn-primary { background-color: #007bff; }
+    .btn-success { background-color: #28a745; }
+    .btn-danger  { background-color: #cc0000; }
+    .btn-file    { background-color: #6c757d; }
+    
+    /* Firma digital */
+    .signature-section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    .signatures-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .signature-block { text-align: center; }
+    /* Clase para los textos de firma que se editarán en modo avanzado */
+    .signature-label { }
+    
+    /* Contenedor del gráfico */
+    .chart-container {
+      width: 600px;
+      max-width: 100%;
+      height: 400px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .chart-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    #mainTitle { font-size: 2.5em; font-weight: bold; }
+    
+    /* Menú de edición (estilo profesional) */
+    #editMenu {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+      margin: 0;
+    }
+    #editMenu fieldset {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      padding: 10px;
+    }
+    #editMenu legend {
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-left: 10px;
+    }
+    #editMenu label {
+      display: block;
+      margin: 6px 0;
+      line-height: 1.4;
+    }
+    
+    /* Opciones de almacenamiento */
+    .fs-buttons {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .fs-buttons button {
+      margin: 0 5px;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+      transition: background-color 0.2s;
+    }
+    .fs-buttons button:hover { filter: brightness(0.95); }
+    .btn-saveFile { background-color: #28a745; }
+    .btn-loadFile { background-color: #007bff; }
+  </style>
+</head>
+<body>
+<div id="pageContainer">
+  <!-- Sidebar: Menú de edición -->
+  <div id="sidebar" class="no-print">
+    <div style="margin-bottom: 10px;">
+      <label>
+        <input type="checkbox" id="editModeCheckbox" onchange="toggleEditingMode(this)" checked>
+        Activar modo edición
+      </label>
+    </div>
+    <div id="editMenu">
+      <fieldset>
+        <legend>Modo de Edición</legend>
+        <label>
+          <input type="checkbox" id="advancedEditCheckbox" onchange="toggleAdvancedEditing(this)">
+          Edición avanzada (encabezados, títulos y firmas)
+        </label>
+        <label>
+          <input type="checkbox" id="roundingCheckbox" onchange="toggleRounding(this)">
+          Redondear elementos rojos
+        </label>
+        <button class="btn btn-danger" onclick="resetDocument()">Restablecer Documento</button>
+        <button class="btn btn-primary" onclick="guardarConfiguracionPredeterminada()">Fijar Configuración Base</button>
+      </fieldset>
+      <fieldset>
+        <legend>Temas Encabezados/Títulos</legend>
+        <label>Fuente (Encabezados):
+          <select id="headingFontSelect">
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+          </select>
+        </label>
+        <label>Tamaño (px):
+          <input type="number" id="headingFontSize" value="18" min="8" max="72" style="width: 60px;">
+        </label>
+        <label>Color de texto:
+          <input type="color" id="headingColorPicker" value="#ffffff">
+        </label>
+        <label><input type="checkbox" id="headingBold"> Negrita</label>
+        <label><input type="checkbox" id="headingUnderline"> Subrayado</label>
+        <label>Aplicar a:
+          <input type="radio" name="headingScope" value="todo" checked> Todo
+          <input type="radio" name="headingScope" value="seleccionado"> Seleccionado
+        </label>
+        <button class="btn btn-primary" onclick="applyHeadingTheme()">Aplicar Tema Encabezados</button>
+      </fieldset>
+      <fieldset>
+        <legend>Temas Generales</legend>
+        <label>Fuente (General):
+          <select id="generalFontSelect">
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+          </select>
+        </label>
+        <label>Tamaño (px):
+          <input type="number" id="generalFontSize" value="14" min="8" max="72">
+        </label>
+        <label>Color de texto (General):
+          <input type="color" id="generalColorPicker" value="#000000">
+        </label>
+        <label>Color de fondo:
+          <input type="color" id="bgColorPicker" value="#ffffff">
+        </label>
+        <button class="btn btn-primary" onclick="applyGeneralTheme()">Aplicar Tema General</button>
+      </fieldset>
+      <fieldset>
+        <legend>Logos</legend>
+        <label>Logo Izquierdo:
+          <input type="file" id="leftLogoInput" accept="image/*">
+        </label>
+        <button class="btn btn-danger" onclick="removeLogo('left')">Eliminar Logo Izquierdo</button>
+        <br><br>
+        <label>Logo Derecho:
+          <input type="file" id="rightLogoInput" accept="image/*">
+        </label>
+        <button class="btn btn-danger" onclick="removeLogo('right')">Eliminar Logo Derecho</button>
+      </fieldset>
+      <fieldset>
+        <legend>Configuración de Gráfico</legend>
+        <label>Tipo de gráfico:
+          <select id="chartTypeSelect">
+            <option value="pie">Pastel</option>
+            <option value="doughnut">Dona</option>
+            <option value="bar">Barras</option>
+          </select>
+        </label>
+        <label>Color "Bueno":
+          <input type="color" id="colorBueno" value="#008000">
+        </label>
+        <label>Color "Alerta":
+          <input type="color" id="colorAlerta" value="#FFFF00">
+        </label>
+        <label>Color "Crítico":
+          <input type="color" id="colorCritico" value="#FF0000">
+        </label>
+        <button class="btn btn-primary" onclick="applyChartConfig()">Aplicar Configuración de Gráfico</button>
+      </fieldset>
+      <fieldset class="fs-buttons">
+        <legend>Almacenamiento</legend>
+        <button class="btn btn-saveFile" onclick="guardarEnArchivo()">Guardar en Archivo</button>
+        <button class="btn btn-loadFile" onclick="cargarDesdeArchivo()">Cargar desde Archivo</button>
+      </fieldset>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div id="mainContainer">
+    <div id="logoContainer">
+      <img id="logoLeft" src="" alt="Logo Izquierdo">
+      <img id="logoRight" src="" alt="Logo Derecho">
+    </div>
+    <div class="section-title" id="mainTitle">Reporte de Termografía Infrarroja</div>
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+      <button class="btn btn-primary" onclick="addHeaderRow()">Agregar Fila Encabezado</button>
+      <button class="btn btn-danger" onclick="removeSelectedHeaderRows()">Eliminar Fila Seleccionada</button>
+    </div>
+    <table class="header-table" id="headerTable">
+      <tr>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Tipo de Reporte
+        </td>
+        <td class="white-field"><input type="text" placeholder="Termografía Infrarroja"></td>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Equipo de Medición
+        </td>
+        <td class="white-field"><input type="text" placeholder="Coco-TA1"></td>
+      </tr>
+      <tr>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Equipo
+        </td>
+        <td class="white-field"><input type="text" placeholder="Bomba de Ipyon1"></td>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Sistema
+        </td>
+        <td class="white-field"><input type="text" placeholder="HM - Wet Plant"></td>
+      </tr>
+      <tr>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Asset
+        </td>
+        <td class="white-field"><input type="text" placeholder="N/A"></td>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Planta
+        </td>
+        <td class="white-field"><input type="text" placeholder="Wet Plant"></td>
+      </tr>
+      <tr>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Condición de Operación
+        </td>
+        <td class="white-field"><input type="text" placeholder="Continua"></td>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Fecha de Reporte
+        </td>
+        <td class="white-field"><input type="text" class="date-picker" placeholder="Selecciona fecha"></td>
+      </tr>
+      <tr>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Fecha Mantenimiento
+        </td>
+        <td class="white-field"><input type="text" class="date-picker" placeholder="Selecciona fecha"></td>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Analista
+        </td>
+        <td class="white-field"><input type="text" placeholder="José Espinosa"></td>
+      </tr>
+      <tr>
+        <td class="label-red">
+          <input type="checkbox" class="header-select" /> Objetivo
+        </td>
+        <td class="white-field" colspan="3">
+          <textarea rows="2" placeholder="Evaluación de desempeño y condición mecánica del activo mediante análisis de vibraciones"></textarea>
+        </td>
+      </tr>
+    </table>
+    <hr class="hr-gradient">
+    <div class="section-title">Equipos Inspeccionados</div>
+    <div id="tableEditButtons" class="no-print" style="display: none;">
+      <input type="file" id="fileInput" accept=".csv" style="display: none;" onchange="importCSV()">
+      <button id="importBtn" class="btn btn-file" onclick="document.getElementById('fileInput').click()">Importar lista de equipos</button>
+      <button id="addRowBtn" class="btn btn-primary" onclick="addRow()">Agregar Fila</button>
+      <button id="removeRowsBtn" class="btn btn-danger" onclick="removeSelectedRows()">Eliminar filas seleccionadas</button>
+      <button id="duplicateRowsBtn" class="btn btn-success" onclick="duplicateSelectedRows()">Duplicar filas seleccionadas</button>
+    </div>
+    <table class="inspection-table" id="inspectionTable">
+      <thead>
+        <tr>
+          <th class="sel-column">Sel.</th>
+          <th>Equipo</th>
+          <th>Mes de Inspección</th>
+          <th>Ubicación</th>
+          <th>Estado (B/A/C)</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sel-column"><input type="checkbox" name="rowSelector"></td>
+          <td><input type="text" name="equipo[]"></td>
+          <td><input type="month" name="mesInspeccion[]"></td>
+          <td><input type="text" name="ubicacion[]"></td>
+          <td><input type="text" name="estado[]" placeholder="B / A / C" oninput="updateEstadoColor(this)"></td>
+          <td><input type="text" name="acciones[]" placeholder="Acciones..."></td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="chartSection">
+      <div class="section-title">Resumen de Estados de Equipos</div>
+      <div class="chart-container">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+    <hr class="hr-gradient">
+    <div class="signature-section">
+      <div class="section-title">Firma Digital</div>
+      <div class="signatures-container">
+        <div class="signature-block">
+          <p class="signature-label">Nombre del responsable:</p>
+          <input type="text" placeholder="Ingresa tu nombre aquí" style="width: 300px;">
+          <br><br>
+          <canvas id="signatureCanvas" width="400" height="100" style="border:1px solid #ccc;"></canvas>
+          <br><br>
+          <button class="btn btn-danger no-print" onclick="clearSignature()">Borrar firma</button>
+        </div>
+        <div class="signature-block">
+          <p class="signature-label">Nombre del responsable 2:</p>
+          <input type="text" placeholder="Ingresa el nombre para la segunda firma" style="width: 300px;">
+          <br><br>
+          <canvas id="signatureCanvas2" width="400" height="100" style="border:1px solid #ccc;"></canvas>
+          <br><br>
+          <button class="btn btn-danger no-print" onclick="clearSecondSignature()">Borrar segunda firma</button>
+        </div>
+      </div>
+    </div>
+    <div class="no-print" style="text-align: center; margin-top: 20px;">
+      <button class="btn btn-success" onclick="saveReport()">Guardar Reporte</button>
+      <button class="btn btn-primary" onclick="printReport()">Imprimir Reporte</button>
+    </div>
+    <div class="fs-buttons no-print">
+      <button class="btn btn-saveFile" onclick="guardarEnArchivo()">Guardar en Archivo</button>
+      <button class="btn btn-loadFile" onclick="cargarDesdeArchivo()">Cargar desde Archivo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /*********************************************************
+   * VARIABLES GLOBALES PARA EL GRÁFICO
+   ********************************************************/
+  let chart = null;
+
+  /*********************************************************
+   * MODO EDICIÓN
+   ********************************************************/
+  function toggleEditingMode(checkbox) {
+    const isEditing = checkbox.checked;
+    document.getElementById('editMenu').style.display = isEditing ? 'block' : 'none';
+    document.getElementById('tableEditButtons').style.display = isEditing ? 'block' : 'none';
+    document.querySelectorAll('.header-table input, .header-table textarea').forEach(el => { el.disabled = !isEditing; });
+    document.querySelectorAll('.inspection-table input').forEach(el => { el.disabled = !isEditing; });
+  }
+
+  function toggleAdvancedEditing(checkbox) {
+    const advanced = checkbox.checked;
+    // Editar celdas rojas del encabezado
+    document.querySelectorAll('.header-table .label-red').forEach(function(el) {
+      if (advanced) {
+        el.setAttribute('contenteditable', 'true');
+        el.style.border = "1px dashed #000";
+      } else {
+        el.removeAttribute('contenteditable');
+        el.style.border = "";
+      }
+    });
+    // Editar títulos de sección
+    document.querySelectorAll('.section-title').forEach(function(el) {
+      if (advanced) {
+        el.setAttribute('contenteditable', 'true');
+        el.style.border = "1px dashed #000";
+      } else {
+        el.removeAttribute('contenteditable');
+        el.style.border = "";
+      }
+    });
+    // Editar cabeceras de la tabla de inspecciones
+    document.querySelectorAll('.inspection-table th').forEach(function(el) {
+      if (advanced) {
+        el.setAttribute('contenteditable', 'true');
+        el.style.border = "1px dashed #000";
+      } else {
+        el.removeAttribute('contenteditable');
+        el.style.border = "";
+      }
+    });
+    // Editar textos de firma
+    document.querySelectorAll('.signature-label').forEach(function(el) {
+      if (advanced) {
+        el.setAttribute('contenteditable', 'true');
+        el.style.border = "1px dashed #000";
+      } else {
+        el.removeAttribute('contenteditable');
+        el.style.border = "";
+      }
+    });
+  }
+
+  function toggleRounding(checkbox) {
+    const rounding = checkbox.checked;
+    document.querySelectorAll('.label-red, .inspection-table th, .section-title').forEach(function(el) {
+      el.style.borderRadius = rounding ? '10px' : '0';
+    });
+  }
+
+  /*********************************************************
+   * TABLA DE ENCABEZADO
+   ********************************************************/
+  function addHeaderRow() {
+    const table = document.getElementById('headerTable');
+    const newRow = table.insertRow();
+    let cell1 = newRow.insertCell(0);
+    cell1.classList.add('label-red');
+    cell1.innerHTML = `<input type="checkbox" class="header-select" /> Nuevo Campo`;
+    let cell2 = newRow.insertCell(1);
+    cell2.classList.add('white-field');
+    cell2.innerHTML = `<input type="text" placeholder="Valor...">`;
+    let cell3 = newRow.insertCell(2);
+    cell3.classList.add('label-red');
+    cell3.innerHTML = `<input type="checkbox" class="header-select" /> Otro Campo`;
+    let cell4 = newRow.insertCell(3);
+    cell4.classList.add('white-field');
+    cell4.innerHTML = `<input type="text" placeholder="Valor...">`;
+  }
+
+  function removeSelectedHeaderRows() {
+    const table = document.getElementById('headerTable');
+    const checkboxes = table.querySelectorAll('.header-select:checked');
+    checkboxes.forEach(checkbox => {
+      const row = checkbox.parentNode.parentNode;
+      row.remove();
+    });
+  }
+
+  /*********************************************************
+   * TABLA DE INSPECCIONES
+   ********************************************************/
+  function addRow() {
+    const tableBody = document.getElementById('inspectionTable').querySelector('tbody');
+    const newRow = tableBody.insertRow();
+    let cell0 = newRow.insertCell(0);
+    cell0.classList.add('sel-column');
+    cell0.innerHTML = '<input type="checkbox" name="rowSelector">';
+    let cell1 = newRow.insertCell(1);
+    cell1.innerHTML = '<input type="text" name="equipo[]">';
+    let cell2 = newRow.insertCell(2);
+    cell2.innerHTML = '<input type="month" name="mesInspeccion[]">';
+    let cell3 = newRow.insertCell(3);
+    cell3.innerHTML = '<input type="text" name="ubicacion[]">';
+    let cell4 = newRow.insertCell(4);
+    cell4.innerHTML = '<input type="text" name="estado[]" placeholder="B / A / C" oninput="updateEstadoColor(this)">';
+    let cell5 = newRow.insertCell(5);
+    cell5.innerHTML = '<input type="text" name="acciones[]" placeholder="Acciones...">';
+    updateChart();
+  }
+
+  function removeSelectedRows() {
+    const table = document.getElementById('inspectionTable');
+    const checkboxes = table.querySelectorAll('tbody input[name="rowSelector"]:checked');
+    checkboxes.forEach(checkbox => {
+      const row = checkbox.closest('tr');
+      row.remove();
+    });
+    updateChart();
+  }
+
+  function duplicateSelectedRows() {
+    const table = document.getElementById('inspectionTable');
+    const tableBody = table.querySelector('tbody');
+    const checkboxes = table.querySelectorAll('tbody input[name="rowSelector"]:checked');
+    let rowsToDuplicate = [];
+    checkboxes.forEach(checkbox => {
+      rowsToDuplicate.push(checkbox.closest('tr'));
+    });
+    rowsToDuplicate.forEach(row => {
+      let newRow = row.cloneNode(true);
+      newRow.querySelector('input[name="rowSelector"]').checked = false;
+      tableBody.insertBefore(newRow, row.nextSibling);
+      let estadoInput = newRow.querySelector('input[name="estado[]"]');
+      if (estadoInput) {
+        estadoInput.oninput = function() { updateEstadoColor(estadoInput); };
+      }
+    });
+    updateChart();
+  }
+
+  function importCSV() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/);
+      lines.forEach(line => {
+        const equipoName = line.trim();
+        if (equipoName) {
+          const tableBody = document.getElementById('inspectionTable').querySelector('tbody');
+          const newRow = tableBody.insertRow();
+          let cell0 = newRow.insertCell(0);
+          cell0.classList.add('sel-column');
+          cell0.innerHTML = '<input type="checkbox" name="rowSelector">';
+          let cell1 = newRow.insertCell(1);
+          cell1.innerHTML = `<input type="text" name="equipo[]" value="${equipoName}">`;
+          let cell2 = newRow.insertCell(2);
+          cell2.innerHTML = '<input type="month" name="mesInspeccion[]">';
+          let cell3 = newRow.insertCell(3);
+          cell3.innerHTML = '<input type="text" name="ubicacion[]">';
+          let cell4 = newRow.insertCell(4);
+          cell4.innerHTML = '<input type="text" name="estado[]" placeholder="B / A / C" oninput="updateEstadoColor(this)">';
+          let cell5 = newRow.insertCell(5);
+          cell5.innerHTML = '<input type="text" name="acciones[]" placeholder="Acciones...">';
+        }
+      });
+      updateChart();
+    };
+    reader.readAsText(file);
+  }
+
+  /*********************************************************
+   * COLORES DE ESTADO
+   ********************************************************/
+  function updateEstadoColor(input) {
+    const val = input.value.trim().toLowerCase();
+    if (val === 'b') {
+      input.style.backgroundColor = 'green';
+      input.style.color = 'green';
+      input.style.border = "";
+    } else if (val === 'a') {
+      input.style.backgroundColor = 'yellow';
+      input.style.color = 'yellow';
+      input.style.border = "";
+    } else if (val === 'c') {
+      input.style.backgroundColor = '#d60000';
+      input.style.color = '#d60000';
+      input.style.border = "";
+    } else {
+      input.style.backgroundColor = '';
+      input.style.color = '';
+      input.style.border = "";
+    }
+    updateChart();
+  }
+
+  /*********************************************************
+   * CONFIGURACIÓN PREDETERMINADA
+   ********************************************************/
+  function guardarConfiguracionPredeterminada(){
+    var headerHTML = document.getElementById("headerTable").innerHTML;
+    localStorage.setItem("defaultHeaderTable", headerHTML);
+    alert("La configuración predeterminada ha sido guardada.");
+  }
+
+  function resetDocument() {
+    if (confirm("¿Deseas restablecer el documento a su versión base? Se perderán los cambios no guardados.")) {
+      location.reload();
+    }
+  }
+
+  /*********************************************************
+   * APLICAR TEMAS
+   ********************************************************/
+  function applyHeadingTheme() {
+    const font = document.getElementById('headingFontSelect').value;
+    const fontSize = document.getElementById('headingFontSize').value;
+    const color = document.getElementById('headingColorPicker').value;
+    const isBold = document.getElementById('headingBold')?.checked;
+    const isUnderline = document.getElementById('headingUnderline')?.checked;
+    const scope = document.querySelector('input[name="headingScope"]:checked').value;
+    if (scope === "todo") {
+      const headingElements = document.querySelectorAll('.label-red, .section-title, .inspection-table th');
+      headingElements.forEach(el => {
+        el.style.fontFamily = font;
+        el.style.fontSize = fontSize + 'px';
+        el.style.color = color;
+        el.style.fontWeight = isBold ? 'bold' : 'normal';
+        el.style.textDecoration = isUnderline ? 'underline' : 'none';
+      });
+    } else if (scope === "seleccionado") {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontFamily = font;
+        span.style.fontSize = fontSize + 'px';
+        span.style.color = color;
+        span.style.fontWeight = isBold ? 'bold' : 'normal';
+        span.style.textDecoration = isUnderline ? 'underline' : 'none';
+        range.surroundContents(span);
+      }
+    }
+  }
+
+  function applyGeneralTheme() {
+    const generalFont = document.getElementById('generalFontSelect').value;
+    const generalFontSize = document.getElementById('generalFontSize').value;
+    const generalColor = document.getElementById('generalColorPicker').value;
+    const bgColor = document.getElementById('bgColorPicker').value;
+    document.body.style.fontFamily = generalFont;
+    document.body.style.fontSize = generalFontSize + 'px';
+    document.body.style.color = generalColor;
+    document.body.style.backgroundColor = bgColor;
+  }
+
+  /*********************************************************
+   * LOGOS
+   ********************************************************/
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('leftLogoInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const img = document.getElementById('logoLeft');
+          img.src = evt.target.result;
+          img.style.display = 'block';
+          adjustLogoSizes();
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+    document.getElementById('rightLogoInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const img = document.getElementById('logoRight');
+          img.src = evt.target.result;
+          img.style.display = 'block';
+          adjustLogoSizes();
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  });
+
+  function adjustLogoSizes() {
+    const definedWidth = 150;
+    const definedHeight = 100;
+    const leftImg = document.getElementById('logoLeft');
+    const rightImg = document.getElementById('logoRight');
+    if (leftImg && leftImg.src) {
+      leftImg.style.width = definedWidth + "px";
+      leftImg.style.height = definedHeight + "px";
+    }
+    if (rightImg && rightImg.src) {
+      rightImg.style.width = definedWidth + "px";
+      rightImg.style.height = definedHeight + "px";
+    }
+  }
+  function removeLogo(side) {
+    if (side === 'left') {
+      const img = document.getElementById('logoLeft');
+      img.src = "";
+      img.style.display = 'none';
+    } else if (side === 'right') {
+      const img = document.getElementById('logoRight');
+      img.src = "";
+      img.style.display = 'none';
+    }
+  }
+
+  /*********************************************************
+   * GRÁFICO (Chart.js)
+   ********************************************************/
+  function initializeChart() {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: ['Bueno', 'Alerta', 'Crítico'],
+        datasets: [{
+          data: [0, 0, 0],
+          backgroundColor: ['green', 'yellow', '#d60000'],
+          borderColor: ['#fff','#fff','#fff'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: { enabled: false },
+          legend: {
+            position: 'bottom',
+            labels: {
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  const dataset = data.datasets[0];
+                  return data.labels.map((label, i) => {
+                    const value = dataset.data[i];
+                    const color = dataset.backgroundColor[i];
+                    return { text: label + ': ' + value, fillStyle: color, hidden: isNaN(value) || value === null };
+                  });
+                }
+                return [];
+              }
+            }
+          },
+          title: { display: true, text: 'Resumen de Estados de Equipos' },
+          datalabels: {
+            formatter: (value) => value,
+            color: '#fff',
+            font: { weight: 'bold' }
+          }
+        }
+      }
+    });
+    updateChart();
+  }
+
+  function updateChart() {
+    if (!chart) return;
+    let countBueno = 0, countAlerta = 0, countCritico = 0;
+    document.querySelectorAll('input[name="estado[]"]').forEach(input => {
+      const val = input.value.trim().toLowerCase();
+      if (val === 'b') countBueno++;
+      else if (val === 'a') countAlerta++;
+      else if (val === 'c') countCritico++;
+    });
+    chart.data.datasets[0].data = [countBueno, countAlerta, countCritico];
+    chart.update();
+  }
+
+  function applyChartConfig() {
+    if (!chart) return;
+    const chartType = document.getElementById('chartTypeSelect').value;
+    const cBueno = document.getElementById('colorBueno').value;
+    const cAlerta = document.getElementById('colorAlerta').value;
+    const cCritico = document.getElementById('colorCritico').value;
+    chart.data.datasets[0].backgroundColor = [cBueno, cAlerta, cCritico];
+    chart.config.type = chartType;
+    chart.update();
+  }
+
+  /*********************************************************
+   * FIRMA DIGITAL
+   ********************************************************/
+  function clearSignature(){
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  function clearSecondSignature(){
+    const canvas2 = document.getElementById('signatureCanvas2');
+    const ctx2 = canvas2.getContext('2d');
+    ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
+  }
+
+  /*********************************************************
+   * GUARDAR E IMPRIMIR (HTML completo)
+   ********************************************************/
+  function saveReport() {
+    const content = document.documentElement.outerHTML;
+    const blob = new Blob([content], { type: "text/html" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "reporte.html";
+    link.click();
+    setTimeout(() => { URL.revokeObjectURL(link.href); }, 100);
+  }
+
+  function printReport() {
+    window.print();
+  }
+
+  /*********************************************************
+   * OPCIONES DE ALMACENAMIENTO (JSON)
+   ********************************************************/
+  async function guardarEnArchivo() {
+    try {
+      // Recopilamos los datos relevantes
+      const data = {
+        headerTable: document.getElementById("headerTable").innerHTML,
+        inspectionTable: document.getElementById("inspectionTable").innerHTML,
+        generalTheme: {
+          fontFamily: document.body.style.fontFamily,
+          fontSize: document.body.style.fontSize,
+          color: document.body.style.color,
+          backgroundColor: document.body.style.backgroundColor
+        }
+      };
+      const jsonData = JSON.stringify(data);
+      const opciones = {
+        types: [{
+          description: "Archivos JSON",
+          accept: { "application/json": [".json"] }
+        }]
+      };
+      const handle = await window.showSaveFilePicker(opciones);
+      const writable = await handle.createWritable();
+      await writable.write(jsonData);
+      await writable.close();
+      alert("Datos guardados en el archivo seleccionado.");
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar el archivo.");
+    }
+  }
+
+  async function cargarDesdeArchivo() {
+    try {
+      const opciones = {
+        types: [{
+          description: "Archivos JSON",
+          accept: { "application/json": [".json"] }
+        }]
+      };
+      const [handle] = await window.showOpenFilePicker(opciones);
+      const file = await handle.getFile();
+      const contents = await file.text();
+      const data = JSON.parse(contents);
+      // Restaurar las tablas y tema general
+      document.getElementById("headerTable").innerHTML = data.headerTable;
+      document.getElementById("inspectionTable").innerHTML = data.inspectionTable;
+      document.body.style.fontFamily = data.generalTheme.fontFamily || '';
+      document.body.style.fontSize = data.generalTheme.fontSize || '';
+      document.body.style.color = data.generalTheme.color || '';
+      document.body.style.backgroundColor = data.generalTheme.backgroundColor || '';
+      alert("Datos cargados correctamente desde el archivo.");
+      flatpickr(".date-picker", { dateFormat: "d F Y", locale: "es" });
+      updateChart();
+    } catch (err) {
+      console.error(err);
+      alert("Error al cargar el archivo.");
+    }
+  }
+
+  /*********************************************************
+   * DOMContentLoaded
+   ********************************************************/
+  document.addEventListener('DOMContentLoaded', function() {
+    flatpickr(".date-picker", { dateFormat: "d F Y", locale: "es" });
+    initializeChart();
+    let defaultHeader = localStorage.getItem("defaultHeaderTable");
+    if(defaultHeader) {
+      document.getElementById("headerTable").innerHTML = defaultHeader;
+    }
+  });
+</script>
+</body>
+</html>
